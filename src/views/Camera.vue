@@ -1,117 +1,109 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { useRouter } from "vue-router";
 
 const videoRef = ref(null);
 const photo = ref(null);
 let stream = null;
 
+const router = useRouter();
+
 const stopCamera = () => {
-    if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-        stream = null;
-    }
+  if (stream) {
+    stream.getTracks().forEach((track) => track.stop());
+    stream = null;
+  }
 };
 
 const startCamera = async () => {
-    stopCamera();
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "user" },
-            audio: false,
-        });
-        if (videoRef.value) {
-            videoRef.value.srcObject = stream;
-        }
-    } catch (err) {
-        console.error("Error accessing camera:", err);
+  stopCamera();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false,
+    });
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream;
     }
+  } catch (err) {
+    console.error("Error accessing camera:", err);
+  }
 };
 
 function capture() {
-    const video = videoRef.value;
-    if (!video) return;
+  const video = videoRef.value;
+  if (!video) return;
 
-    const size = 300;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
+  const size = 300;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
 
-    const videoAspect = video.videoWidth / video.videoHeight;
-    let sx, sy, sWidth, sHeight;
+  const videoAspect = video.videoWidth / video.videoHeight;
+  let sx, sy, sWidth, sHeight;
 
-    if (videoAspect > 1) {
-        sHeight = video.videoHeight;
-        sWidth = sHeight;
-        sx = (video.videoWidth - sWidth) / 2;
-        sy = 0;
-    } else {
-        sWidth = video.videoWidth;
-        sHeight = sWidth;
-        sx = 0;
-        sy = (video.videoHeight - sHeight) / 2;
-    }
+  if (videoAspect > 1) {
+    sHeight = video.videoHeight;
+    sWidth = sHeight;
+    sx = (video.videoWidth - sWidth) / 2;
+    sy = 0;
+  } else {
+    sWidth = video.videoWidth;
+    sHeight = sWidth;
+    sx = 0;
+    sy = (video.videoHeight - sHeight) / 2;
+  }
 
-    // Mirror effect
-    ctx.translate(size, 0);
-    ctx.scale(-1, 1);
+  // Mirror effect
+  ctx.translate(size, 0);
+  ctx.scale(-1, 1);
 
-    ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, size, size);
+  ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, size, size);
 
-    photo.value = canvas.toDataURL("image/png");
+  photo.value = canvas.toDataURL("image/png");
 
-    stopCamera();
+  stopCamera();
 }
 
 async function retake() {
-    photo.value = null;
-    await nextTick();
-    startCamera();
+  photo.value = null;
+  await nextTick();
+  startCamera();
 }
 
-import { useRouter } from "vue-router";
-
-const router = useRouter();
-
 async function confirmPhoto() {
-    if (!photo.value) return;
+  if (!photo.value) return;
 
-    try {
-        const storedData = localStorage.getItem("signupData");
-        if (!storedData) {
-            console.error("No signup data found in localStorage");
-            return;
-        }
-
-        const formData = JSON.parse(storedData);
-
-        // Strip the data:image/...;base64, part
-        const base64Image = photo.value.replace(/^data:image\/\w+;base64,/, "");
-
-        const payload = {
-            reg_no: formData.registerNumber,
-            name: formData.fullName,
-            password: formData.password,
-            parent_email: formData.parentEmail,
-            role: "student",
-            pfp: null,
-            face: base64Image,
-        };
-
-        const handleSignup = async () => {
   try {
-    // Show loading effect for realism
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const storedData = localStorage.getItem("signupData");
+    if (!storedData) {
+      console.error("No signup data found in localStorage");
+      return;
+    }
 
-    // Fake "success"
+    const formData = JSON.parse(storedData);
+
+    const base64Image = photo.value.replace(/^data:image\/\w+;base64,/, "");
+
+    const payload = {
+      reg_no: formData.registerNumber,
+      name: formData.fullName,
+      password: formData.password,
+      parent_email: formData.parentEmail,
+      role: "student",
+      pfp: null,
+      face: base64Image,
+    };
+
+    // mock signup
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     router.push("/");
   } catch (err) {
     console.error("Error:", err);
     router.push("/signup");
   }
-};
-
-
+}
 
 onMounted(startCamera);
 onBeforeUnmount(stopCamera);
